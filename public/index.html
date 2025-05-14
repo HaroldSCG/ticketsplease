@@ -7,5 +7,19 @@
 </head>
 <body>
   <h1>¡Hola mundo desde el frontend!</h1>
+  <h2 id="mensaje-backend">Cargando mensaje del backend...</h2>
+
+  <script>
+    // Hacemos la solicitud al backend
+    fetch('/api/mensaje')
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('mensaje-backend').innerText = data.mensaje;
+      })
+      .catch(error => {
+        document.getElementById('mensaje-backend').innerText = 'Error al cargar el mensaje del backend.';
+      });
+  </script>
 </body>
 </html>
+
