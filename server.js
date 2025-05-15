@@ -5,18 +5,15 @@ const { Pool } = require("pg");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Conexión a PostgreSQL
 const pool = new Pool({
   connectionString: "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
   ssl: { rejectUnauthorized: false }
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Crear tablas si no existen
 const crearTablas = async () => {
   try {
     await pool.query(`
@@ -50,7 +47,6 @@ const crearTablas = async () => {
   }
 };
 
-// Rutas para vuelos
 app.get("/api/vuelos", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM vuelos ORDER BY id ASC");
@@ -73,7 +69,6 @@ app.post("/api/vuelos", async (req, res) => {
   }
 });
 
-// Rutas para pasajeros
 app.get("/api/pasajeros", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -91,6 +86,20 @@ app.get("/api/pasajeros", async (req, res) => {
 app.post("/api/pasajeros", async (req, res) => {
   const { nombre, nacionalidad, vuelo_id } = req.body;
   try {
+    const count = await pool.query(`
+      SELECT COUNT(*) AS total FROM (
+        SELECT id FROM pasajeros WHERE vuelo_id = $1
+        UNION ALL
+        SELECT id FROM tripulantes WHERE vuelo_id = $1
+      ) AS personas
+    `, [vuelo_id]);
+
+    const limite = await pool.query("SELECT limite_personas FROM vuelos WHERE id = $1", [vuelo_id]);
+
+    if (parseInt(count.rows[0].total) >= parseInt(limite.rows[0].limite_personas)) {
+      return res.status(400).json({ error: "Se ha alcanzado el límite total de personas para este vuelo." });
+    }
+
     await pool.query(
       "INSERT INTO pasajeros (nombre, nacionalidad, vuelo_id) VALUES ($1, $2, $3)",
       [nombre, nacionalidad, vuelo_id]
@@ -101,7 +110,6 @@ app.post("/api/pasajeros", async (req, res) => {
   }
 });
 
-// Rutas para tripulantes
 app.get("/api/tripulantes", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -119,6 +127,20 @@ app.get("/api/tripulantes", async (req, res) => {
 app.post("/api/tripulantes", async (req, res) => {
   const { nombre, nacionalidad, puesto, vuelo_id } = req.body;
   try {
+    const count = await pool.query(`
+      SELECT COUNT(*) AS total FROM (
+        SELECT id FROM pasajeros WHERE vuelo_id = $1
+        UNION ALL
+        SELECT id FROM tripulantes WHERE vuelo_id = $1
+      ) AS personas
+    `, [vuelo_id]);
+
+    const limite = await pool.query("SELECT limite_personas FROM vuelos WHERE id = $1", [vuelo_id]);
+
+    if (parseInt(count.rows[0].total) >= parseInt(limite.rows[0].limite_personas)) {
+      return res.status(400).json({ error: "Se ha alcanzado el límite total de personas para este vuelo." });
+    }
+
     await pool.query(
       "INSERT INTO tripulantes (nombre, nacionalidad, puesto, vuelo_id) VALUES ($1, $2, $3, $4)",
       [nombre, nacionalidad, puesto, vuelo_id]
@@ -129,7 +151,6 @@ app.post("/api/tripulantes", async (req, res) => {
   }
 });
 
-// Iniciar servidor y crear tablas
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
   crearTablas();
