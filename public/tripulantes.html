@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Registro de Tripulantes - AeroSur</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4">Registro de Tripulantes</h1>
+    <form id="formTripulantes" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="nombre" class="form-label">Nombre del Tripulante</label>
+          <input type="text" class="form-control" id="nombre" required>
+        </div>
+        <div class="col-md-6">
+          <label for="nacionalidad" class="form-label">Nacionalidad</label>
+          <input type="text" class="form-control" id="nacionalidad" required>
+        </div>
+        <div class="col-md-6">
+          <label for="puesto" class="form-label">Puesto</label>
+          <select class="form-select" id="puesto" required>
+            <option value="" disabled selected>Seleccione un puesto</option>
+            <option value="Piloto">Piloto</option>
+            <option value="Copiloto">Copiloto</option>
+            <option value="Auxiliar de Vuelo">Auxiliar de Vuelo</option>
+            <option value="Ingeniero de Vuelo">Ingeniero de Vuelo</option>
+            <option value="Supervisor de Cabina">Supervisor de Cabina</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="vueloSelect" class="form-label">Vuelo</label>
+          <select id="vueloSelect" class="form-select" required></select>
+        </div>
+        <div class="col-md-12">
+          <button type="submit" class="btn btn-primary mt-3">Registrar Tripulante</button>
+        </div>
+      </div>
+    </form>
+
+    <h2 class="mb-3">Tripulantes Registrados</h2>
+    <div class="table-responsive">
+      <table class="table table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Nacionalidad</th>
+            <th>Puesto</th>
+            <th>ID Vuelo</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Fecha Salida</th>
+            <th>Fecha Llegada</th>
+          </tr>
+        </thead>
+        <tbody id="tablaTripulantes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('formTripulantes');
+    const tabla = document.getElementById('tablaTripulantes');
+    const vueloSelect = document.getElementById('vueloSelect');
+
+    async function cargarVuelos() {
+      const res = await fetch('/api/vuelos');
+      const data = await res.json();
+      vueloSelect.innerHTML = '<option value="" disabled selected>Seleccione un vuelo</option>';
+      data.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v.id;
+        option.textContent = `ID ${v.id} - ${v.origen} → ${v.destino} | ${v.fecha_salida} → ${v.fecha_llegada}`;
+        vueloSelect.appendChild(option);
+      });
+    }
+
+    async function cargarTripulantes() {
+      const res = await fetch('/api/tripulantes');
+      const data = await res.json();
+      tabla.innerHTML = '';
+      data.forEach(t => {
+        tabla.innerHTML += `
+          <tr>
+            <td>${t.id}</td>
+            <td>${t.nombre}</td>
+            <td>${t.nacionalidad}</td>
+            <td>${t.puesto}</td>
+            <td>${t.vuelo_id}</td>
+            <td>${t.origen}</td>
+            <td>${t.destino}</td>
+            <td>${t.fecha_salida}</td>
+            <td>${t.fecha_llegada}</td>
+          </tr>`;
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombre').value.trim();
+      const nacionalidad = document.getElementById('nacionalidad').value.trim();
+      const puesto = document.getElementById('puesto').value;
+      const vuelo_id = parseInt(vueloSelect.value);
+
+      if (!nombre || !nacionalidad || !puesto || isNaN(vuelo_id)) return alert("Todos los campos son requeridos");
+
+      const res = await fetch('/api/tripulantes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, nacionalidad, puesto, vuelo_id })
+      });
+
+      if (res.ok) {
+        form.reset();
+        cargarTripulantes();
+      } else {
+        alert("Error al registrar tripulante");
+      }
+    });
+
+    cargarVuelos();
+    cargarTripulantes();
+  </script>
+</body>
+</html>
