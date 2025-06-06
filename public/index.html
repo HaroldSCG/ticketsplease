@@ -1,150 +1,174 @@
 <!DOCTYPE html>
 <html lang="es">
+    
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Registro de Vuelos - AeroSur</title>
-    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.3.0/css/all.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/gh/StartBootstrap/startbootstrap-sb-admin@master/dist/css/styles.css" rel="stylesheet" />
-    <link href="styles.css" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Venta de Tickets - Kermés</title>
+  <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
+  <link href="styles.css" rel="stylesheet" />
+  <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
 </head>
 <body class="sb-nav-fixed">
-    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-        <a class="navbar-brand ps-3" href="#"><i class="fas fa-plane me-2"></i>AeroSur</a>
-        <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+  <a class="navbar-brand ps-3" href="index.html">Kermés - Tickets</a>
+  <button class="btn btn-link btn-sm order-1 me-4" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+</nav>
+
+<div id="layoutSidenav">
+  <div id="layoutSidenav_nav">
+    <nav class="sb-sidenav accordion sb-sidenav-dark">
+      <div class="sb-sidenav-menu">
+        <div class="nav"><div class="sb-sidenav-menu-heading">Menú</div>
+          <a class="nav-link" href="index.html">Venta de Tickets</a>
+          <a class="nav-link" href="https://www.youtube.com/watch?v=2qBlE2-WL60">Reportes</a>
+          <a class="nav-link" href="agregar_ticket.html">Ingresar tipo de tickets</a>
+        </div>
+      </div>
+      <div class="sb-sidenav-footer">
+        <div class="small">Logueado como:</div>
+        Personal de ventas
+      </div>
     </nav>
+  </div>
+  <div id="layoutSidenav_content">
+    <main class="container-fluid px-4 mt-4">
+      <h1 class="mb-4">Venta de Tickets</h1>
+      <div class="row" id="ticket-container"></div>
+      <div class="card mt-4">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="comprador" class="form-label">Nombre del comprador (opcional):</label>
+            <input type="text" id="comprador" class="form-control" placeholder="Ej. Juan Pérez">
+          </div>
+          <div class="fw-bold fs-5 mt-3" id="total">Total: Q0.00</div>
+            <button id="btnRealizarVenta" class="btn btn-success mt-3 w-100"
+            onclick="realizarVenta()" disabled>
+            Realizar Venta
+            </button>
 
-    <div id="layoutSidenav">
-        <div id="layoutSidenav_nav">
-            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
-                <div class="sb-sidenav-menu">
-                    <div class="nav">
-                        <div class="sb-sidenav-menu-heading">Listados de:</div>
-                        <a class="nav-link" href="index.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-plane"></i></div>
-                            Vuelos
-                        </a>
-                        <a class="nav-link" href="pasajeros.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
-                            Pasajeros
-                        </a>
-                        <a class="nav-link" href="tripulantes.html">
-                            <div class="sb-nav-link-icon"><i class="fas fa-male"></i></div>
-                            Tripulantes
-                        </a>
-                    </div>
-                </div>
-                <div class="sb-sidenav-footer">
-                    <div class="small">Usuario:</div>
-                    AeroSur Admin
-                </div>
-            </nav>
         </div>
+      </div>
+    </main>
+    <footer class="py-4 bg-light mt-auto">
+      <div class="container-fluid px-4 text-muted small">Made by Harold.</div>
+    </footer>
+  </div>
+</div>
 
-        <div id="layoutSidenav_content">
-            <main class="container-fluid px-4 mt-4">
-                <h1 class="mb-4">Registro de Vuelos</h1>
-                <form id="formVuelos" class="mb-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="origen" class="form-label">Origen</label>
-                            <input type="text" class="form-control" id="origen" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="destino" class="form-label">Destino</label>
-                            <input type="text" class="form-control" id="destino" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="fechaSalida" class="form-label">Fecha de Salida</label>
-                            <input type="datetime-local" class="form-control" id="fechaSalida" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="fechaLlegada" class="form-label">Fecha de Llegada</label>
-                            <input type="datetime-local" class="form-control" id="fechaLlegada" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="limitePersonas" class="form-label">Límite de Personas</label>
-                            <input type="number" class="form-control" id="limitePersonas" min="1" required>
-                        </div>
-                        <div class="col-md-12">
-                            <button type="submit" class="btn btn-primary mt-3">Registrar Vuelo</button>
-                        </div>
-                    </div>
-                </form>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let tickets = [];
 
-                <h2 class="mb-3">Vuelos Registrados</h2>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Origen</th>
-                                <th>Destino</th>
-                                <th>Fecha Salida</th>
-                                <th>Fecha Llegada</th>
-                                <th>Límite Personas</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaVuelos"></tbody>
-                    </table>
-                </div>
-            </main>
+async function cargarTickets() {
+  try {
+    const res = await fetch('/api/tickets');
+    tickets = await res.json();
+    renderTickets();
+    calcularTotal();
+  } catch (err) {
+    alert("Error al cargar tickets.");
+  }
+}
+
+function renderTickets() {
+  const container = document.getElementById('ticket-container');
+  container.innerHTML = '';
+  tickets.forEach(t => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 mb-4';
+    col.innerHTML = `
+      <div class="card h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">${t.nombre}</h5>
+          <p class="card-text">Precio: <strong>Q${parseFloat(t.precio).toFixed(2)}</strong></p>
+          <p>Disponibles: <span id="disp-${t.id}">${t.stock_actual}</span></p>
+          <input type="number" class="form-control" id="cantidad-${t.id}"
+            min="0" max="${t.stock_actual}" placeholder="Cantidad"
+            oninput="calcularTotal()" />
         </div>
-    </div>
+      </div>`;
+    container.appendChild(col);
+  });
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/StartBootstrap/startbootstrap-sb-admin@master/dist/js/scripts.js"></script>
-    <script>
-        const formVuelos = document.getElementById("formVuelos");
-        const tablaVuelos = document.getElementById("tablaVuelos");
+function calcularTotal() {
+  let total = 0, valido = true, alguno = false;
+  tickets.forEach(t => {
+    const inp = document.getElementById(`cantidad-${t.id}`);
+    const qty = parseInt(inp.value) || 0;
+    if (qty < 0 || qty > t.stock_actual) {
+      inp.classList.add('is-invalid');
+      valido = false;
+    } else {
+      inp.classList.remove('is-invalid');
+      total += qty * parseFloat(t.precio);
+      if (qty > 0) alguno = true;
+    }
+  });
+  document.getElementById('total').innerText = `Total: Q${total.toFixed(2)}`;
+  document.getElementById('btnRealizarVenta').disabled = !valido || !alguno;
+}
 
-        async function cargarVuelos() {
-            const res = await fetch("/api/vuelos");
-            const data = await res.json();
-            tablaVuelos.innerHTML = "";
-            data.forEach(v => {
-                tablaVuelos.innerHTML += `
-                    <tr>
-                        <td>${v.id}</td>
-                        <td>${v.origen}</td>
-                        <td>${v.destino}</td>
-                        <td>${v.fecha_salida}</td>
-                        <td>${v.fecha_llegada}</td>
-                        <td>${v.limite_personas}</td>
-                    </tr>
-                `;
-            });
-        }
 
-        formVuelos.addEventListener("submit", async (e) => {
-            e.preventDefault();
+let procesandoVenta = false;
 
-            const origen = document.getElementById("origen").value.trim();
-            const destino = document.getElementById("destino").value.trim();
-            const fecha_salida = document.getElementById("fechaSalida").value;
-            const fecha_llegada = document.getElementById("fechaLlegada").value;
-            const limite_personas = parseInt(document.getElementById("limitePersonas").value);
+async function realizarVenta() {
+  if (procesandoVenta) return; // 🚫 Si ya está en curso, no continuar
+  procesandoVenta = true;      // ✅ Activar bandera
 
-            if (origen === destino) return alert("Origen y destino no pueden ser iguales");
-            if (new Date(fecha_llegada) <= new Date(fecha_salida)) return alert("La fecha de llegada debe ser posterior a la salida");
+  const btn = document.getElementById('btnRealizarVenta');
+  btn.disabled = true;
 
-            const res = await fetch("/api/vuelos", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ origen, destino, fecha_salida, fecha_llegada, limite_personas })
-            });
+  calcularTotal();
+  const detalles = [];
+  tickets.forEach(t => {
+    const qty = parseInt(document.getElementById(`cantidad-${t.id}`).value) || 0;
+    if (qty > 0) detalles.push({
+      tipo_ticket_id: t.id,
+      cantidad: qty,
+      subtotal: qty * parseFloat(t.precio)
+    });
+  });
 
-            if (res.ok) {
-                formVuelos.reset();
-                cargarVuelos();
-            } else {
-                alert("Error al registrar el vuelo");
-            }
-        });
+  const total = detalles.reduce((a, b) => a + b.subtotal, 0);
+  const comprador = document.getElementById('comprador').value;
 
-        cargarVuelos();
-    </script>
+  if (detalles.length === 0) {
+    alert("Selecciona al menos un ticket.");
+    procesandoVenta = false; // 🔓 Liberar bandera
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/ventas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comprador, total, detalles })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error desconocido");
+
+    document.getElementById('comprador').value = '';
+    await cargarTickets();
+  } catch (err) {
+    alert("❌ " + err.message);
+  }
+
+  // 🔁 Recalcular total y liberar bandera después de 1 segundo
+  setTimeout(() => {
+    procesandoVenta = false;
+    calcularTotal();
+  }, 500);
+}
+
+document.getElementById('sidebarToggle').addEventListener('click', e => {
+  e.preventDefault(); document.body.classList.toggle('sb-sidenav-toggled');
+});
+
+document.addEventListener('DOMContentLoaded', cargarTickets);
+</script>
 </body>
 </html>

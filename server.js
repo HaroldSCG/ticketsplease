@@ -6,8 +6,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
-  connectionString: "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL ||
+    "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
+  ssl: { rejectUnauthorized: false },
 });
 
 app.use(express.json());
@@ -17,141 +18,148 @@ app.use(express.static(path.join(__dirname, "public")));
 const crearTablas = async () => {
   try {
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS vuelos (
-        id SERIAL PRIMARY KEY,
-        origen VARCHAR(100) NOT NULL,
-        destino VARCHAR(100) NOT NULL,
-        fecha_salida TIMESTAMP NOT NULL,
-        fecha_llegada TIMESTAMP NOT NULL CHECK (fecha_llegada > fecha_salida),
-        limite_personas INTEGER NOT NULL CHECK (limite_personas > 0)
-      );
-
-      CREATE TABLE IF NOT EXISTS pasajeros (
+      CREATE TABLE IF NOT EXISTS tipo_ticket (
         id SERIAL PRIMARY KEY,
         nombre VARCHAR(100) NOT NULL,
-        nacionalidad VARCHAR(50) NOT NULL,
-        vuelo_id INTEGER NOT NULL REFERENCES vuelos(id) ON DELETE CASCADE
+        precio DECIMAL(10,2) NOT NULL CHECK (precio > 0),
+        stock_inicial INTEGER NOT NULL CHECK (stock_inicial >= 0),
+        stock_actual INTEGER NOT NULL CHECK (stock_actual >= 0)
       );
-
-      CREATE TABLE IF NOT EXISTS tripulantes (
+      CREATE TABLE IF NOT EXISTS ventas (
         id SERIAL PRIMARY KEY,
-        nombre VARCHAR(100) NOT NULL,
-        nacionalidad VARCHAR(50) NOT NULL,
-        puesto VARCHAR(50) NOT NULL,
-        vuelo_id INTEGER NOT NULL REFERENCES vuelos(id) ON DELETE CASCADE
+        fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        total DECIMAL(10,2) NOT NULL CHECK (total >= 0),
+        comprador VARCHAR(100)
       );
+      CREATE TABLE IF NOT EXISTS detalle_venta (
+        id SERIAL PRIMARY KEY,
+        venta_id INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+        tipo_ticket_id INTEGER NOT NULL REFERENCES tipo_ticket(id) ON DELETE CASCADE,
+        cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+        subtotal DECIMAL(10,2) NOT NULL CHECK (subtotal >= 0),
+        UNIQUE (venta_id, tipo_ticket_id)
+      );
+      CREATE OR REPLACE FUNCTION descontar_stock()
+      RETURNS TRIGGER AS $$
+      DECLARE stock_disponible INTEGER;
+      BEGIN
+        SELECT stock_actual INTO stock_disponible FROM tipo_ticket WHERE id = NEW.tipo_ticket_id;
+        IF stock_disponible < NEW.cantidad THEN
+          RAISE EXCEPTION 'No hay suficiente stock para el ticket ID %: solicitado %, disponible %',
+            NEW.tipo_ticket_id, NEW.cantidad, stock_disponible;
+        END IF;
+        UPDATE tipo_ticket SET stock_actual = stock_actual - NEW.cantidad WHERE id = NEW.tipo_ticket_id;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS trigger_descontar_stock ON detalle_venta;
+      CREATE TRIGGER trigger_descontar_stock
+        BEFORE INSERT ON detalle_venta
+        FOR EACH ROW EXECUTE FUNCTION descontar_stock();
     `);
-    console.log("✅ Tablas creadas o ya existen.");
-  } catch (error) {
-    console.error("❌ Error al crear tablas:", error);
+    console.log("✅ Tablas y triggers creados/verificados");
+  } catch (err) {
+    console.error("❌ Error al crear tablas:", err);
   }
 };
 
-app.get("/api/vuelos", async (req, res) => {
+app.get("/api/tickets", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM vuelos ORDER BY id ASC");
+    const result = await pool.query("SELECT * FROM tipo_ticket ORDER BY id");
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/vuelos", async (req, res) => {
-  const { origen, destino, fecha_salida, fecha_llegada, limite_personas } = req.body;
+app.get("/api/tickets/:id", async (req, res) => {
   try {
-    await pool.query(
-      "INSERT INTO vuelos (origen, destino, fecha_salida, fecha_llegada, limite_personas) VALUES ($1, $2, $3, $4, $5)",
-      [origen, destino, fecha_salida, fecha_llegada, limite_personas]
+    const result = await pool.query("SELECT * FROM tipo_ticket WHERE id = $1", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Ticket no encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/tickets", async (req, res) => {
+  const { nombre, precio, stock_inicial, stock_actual } = req.body;
+  if (!(nombre && precio > 0 && stock_inicial >= 0 && stock_actual >= 0)) {
+    return res.status(400).json({ error: "Datos de ticket inválidos." });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO tipo_ticket (nombre, precio, stock_inicial, stock_actual)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [nombre, precio, stock_inicial, stock_actual]
     );
-    res.status(201).json({ message: "Vuelo registrado" });
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get("/api/pasajeros", async (req, res) => {
+app.put("/api/tickets/:id", async (req, res) => {
+  const { nombre, precio, stock_inicial, stock_actual } = req.body;
+  if (!(nombre && precio > 0 && stock_inicial >= 0 && stock_actual >= 0)) {
+    return res.status(400).json({ error: "Datos inválidos" });
+  }
   try {
-    const result = await pool.query(`
-      SELECT p.*, v.origen, v.destino, v.fecha_salida, v.fecha_llegada 
-      FROM pasajeros p 
-      JOIN vuelos v ON p.vuelo_id = v.id
-      ORDER BY p.id ASC
-    `);
-    res.json(result.rows);
+    const result = await pool.query(
+      `UPDATE tipo_ticket
+       SET nombre = $1, precio = $2, stock_inicial = $3, stock_actual = $4
+       WHERE id = $5 RETURNING *`,
+      [nombre, precio, stock_inicial, stock_actual, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Ticket no encontrado" });
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/pasajeros", async (req, res) => {
-  const { nombre, nacionalidad, vuelo_id } = req.body;
+app.delete("/api/tickets/:id", async (req, res) => {
   try {
-    const count = await pool.query(`
-      SELECT COUNT(*) AS total FROM (
-        SELECT id FROM pasajeros WHERE vuelo_id = $1
-        UNION ALL
-        SELECT id FROM tripulantes WHERE vuelo_id = $1
-      ) AS personas
-    `, [vuelo_id]);
+    const result = await pool.query("DELETE FROM tipo_ticket WHERE id = $1 RETURNING *", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Ticket no encontrado" });
+    res.json({ message: "Ticket eliminado" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const limite = await pool.query("SELECT limite_personas FROM vuelos WHERE id = $1", [vuelo_id]);
-
-    if (parseInt(count.rows[0].total) >= parseInt(limite.rows[0].limite_personas)) {
-      return res.status(400).json({ error: "Se ha alcanzado el límite total de personas para este vuelo." });
+// Endpoints de ventas (sin cambios)
+app.post("/api/ventas", async (req, res) => {
+  const { comprador, total, detalles } = req.body;
+  if (!Array.isArray(detalles) || detalles.length === 0 || total < 0) {
+    return res.status(400).json({ error: "Datos de venta inválidos." });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ventaRes = await client.query(
+      "INSERT INTO ventas (comprador, total) VALUES ($1, $2) RETURNING id",
+      [comprador || null, total]
+    );
+    const ventaId = ventaRes.rows[0].id;
+    for (const d of detalles) {
+      await client.query(
+        `INSERT INTO detalle_venta (venta_id, tipo_ticket_id, cantidad, subtotal)
+         VALUES ($1, $2, $3, $4)`,
+        [ventaId, d.tipo_ticket_id, d.cantidad, d.subtotal]
+      );
     }
-
-    await pool.query(
-      "INSERT INTO pasajeros (nombre, nacionalidad, vuelo_id) VALUES ($1, $2, $3)",
-      [nombre, nacionalidad, vuelo_id]
-    );
-    res.status(201).json({ message: "Pasajero registrado" });
+    await client.query("COMMIT");
+    res.status(201).json({ message: "Venta registrada exitosamente." });
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/tripulantes", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT t.*, v.origen, v.destino, v.fecha_salida, v.fecha_llegada 
-      FROM tripulantes t 
-      JOIN vuelos v ON t.vuelo_id = v.id
-      ORDER BY t.id ASC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/api/tripulantes", async (req, res) => {
-  const { nombre, nacionalidad, puesto, vuelo_id } = req.body;
-  try {
-    const count = await pool.query(`
-      SELECT COUNT(*) AS total FROM (
-        SELECT id FROM pasajeros WHERE vuelo_id = $1
-        UNION ALL
-        SELECT id FROM tripulantes WHERE vuelo_id = $1
-      ) AS personas
-    `, [vuelo_id]);
-
-    const limite = await pool.query("SELECT limite_personas FROM vuelos WHERE id = $1", [vuelo_id]);
-
-    if (parseInt(count.rows[0].total) >= parseInt(limite.rows[0].limite_personas)) {
-      return res.status(400).json({ error: "Se ha alcanzado el límite total de personas para este vuelo." });
-    }
-
-    await pool.query(
-      "INSERT INTO tripulantes (nombre, nacionalidad, puesto, vuelo_id) VALUES ($1, $2, $3, $4)",
-      [nombre, nacionalidad, puesto, vuelo_id]
-    );
-    res.status(201).json({ message: "Tripulante registrado" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    await client.query("ROLLBACK");
+    res.status(400).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor en http://localhost:${PORT}`);
   crearTablas();
 });
