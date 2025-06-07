@@ -128,7 +128,8 @@
         tr.innerHTML = `
           <td>${venta.id}</td>
 
-          <td>${new Date(venta.fecha).toLocaleString()}</td>
+          <td>${new Date(venta.fecha).toLocaleString('es-GT', { timeZone: 'America/Guatemala' })}</td>
+
           <td>${comprador}</td>
           <td>${parseFloat(venta.total).toFixed(2)}</td>
         `;
