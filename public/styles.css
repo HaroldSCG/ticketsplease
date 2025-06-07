@@ -85,6 +85,14 @@
   box-sizing: border-box;
 }
 
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: #aaa;
+  border-radius: 4px;
+}
+
   table.dataTable tfoot {
     display: table-row-group;
     background-color: #f9f9f9;
