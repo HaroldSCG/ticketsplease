@@ -94,7 +94,15 @@ app.get("/api/tickets/:id", async (req, res) => {
 // ==== ENDPOINTS ventas ====
 app.get("/api/ventas", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM ventas ORDER BY id");
+    const result = await pool.query(`
+      SELECT 
+        id,
+        to_char(fecha_hora, 'YYYY-MM-DD"T"HH24:MI:SS') AS fecha,
+        total,
+        comprador
+      FROM ventas
+      ORDER BY id
+    `);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -226,3 +234,5 @@ io.on("connection", (socket) => {
     .then(result => socket.emit("actualizar_tickets", result.rows))
     .catch(err => console.error(err));
 });
+
+

@@ -85,6 +85,26 @@
   box-sizing: border-box;
 }
 
+  table.dataTable tfoot {
+    display: table-row-group;
+    background-color: #f9f9f9;
+    font-weight: bold;
+  }
+
+  /* Evita que se colapse el tfoot por scroll o tabla renderizada */
+  .dataTable-wrapper .dataTable-container {
+    overflow-x: auto;
+  }
+
+  /* Asegura que el total quede visible */
+  tfoot th {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    z-index: 1;
+  }
+
+
 @media (prefers-reduced-motion: no-preference) {
   :root {
     scroll-behavior: smooth;
@@ -4222,6 +4242,7 @@ textarea.form-control-lg {
   padding: var(--bs-card-spacer-y) var(--bs-card-spacer-x);
   color: var(--bs-card-color);
 }
+
 
 .card-title {
   margin-bottom: var(--bs-card-title-spacer-y);

@@ -8,133 +8,183 @@
   <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
   <link href="styles.css" rel="stylesheet" />
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+  
 </head>
+
+
 <body class="sb-nav-fixed">
-<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-  <a class="navbar-brand ps-3" href="index.html">Kermés - Tickets</a>
-  <button class="btn btn-link btn-sm order-1 me-4" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-</nav>
-<div id="layoutSidenav">
-  <div id="layoutSidenav_nav">
-    <nav class="sb-sidenav accordion sb-sidenav-dark">
-      <div class="sb-sidenav-menu">
-        <div class="nav"><div class="sb-sidenav-menu-heading">Menú</div>
-          <a class="nav-link" href="index.html">Venta de Tickets</a>
-          <a class="nav-link" href="reportes.html">Reportes</a>
-          <a class="nav-link" href="agregar_ticket.html">Ingresar tipo de tickets</a>
+  <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+    <a class="navbar-brand ps-3" href="index.html">Kermés - Tickets</a>
+    <button class="btn btn-link btn-sm order-1 me-4" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+  </nav>
+
+  <div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+      <nav class="sb-sidenav accordion sb-sidenav-dark">
+        <div class="sb-sidenav-menu">
+          <div class="nav">
+            <div class="sb-sidenav-menu-heading">Menú</div>
+            <a class="nav-link" href="index.html">Venta de Tickets</a>
+            <a class="nav-link" href="reportes.html">Reportes</a>
+            <a class="nav-link" href="agregar_ticket.html">Ingresar tipo de tickets</a>
+          </div>
         </div>
-      </div>
-      <div class="sb-sidenav-footer">
-        <div class="small">Logueado como:</div>
-        Personal de ventas
-      </div>
-    </nav>
+        <div class="sb-sidenav-footer">
+          <div class="small">Logueado como:</div>
+          Personal de ventas
+        </div>
+      </nav>
+    </div>
+
+    <div id="layoutSidenav_content">
+      <main class="container-fluid px-4 mt-4">
+        <h1 class="mb-4">Ventas y Detalles</h1>
+
+        <!-- Ventas -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-table me-1"></i> Ventas</span>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#tablaVentasCollapse">
+              Mostrar / Ocultar
+            </button>
+          </div>
+          <div class="card-body collapse show" id="tablaVentasCollapse">
+            <table class="table table-bordered" id="tablaVentas">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Comprador</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="ventasBody"></tbody>
+
+
+            </table>
+              <div class="mt-2 text-end fw-bold">
+              Total ventas: <span id="totalVentas">Q0.00</span>
+              </div>
+          </div>
+        </div>
+
+        <!-- Detalles -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-table me-1"></i> Detalles de Venta</span>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#tablaDetallesCollapse">
+              Mostrar / Ocultar
+            </button>
+          </div>
+          <div class="card-body collapse show" id="tablaDetallesCollapse">
+            <table class="table table-bordered" id="tablaDetalles">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>ID Venta</th>
+                  <th>ID Ticket</th>
+                  <th>Cantidad</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="detallesBody"></tbody>
+ 
+            </table>
+            <div class="mt-2 text-end fw-bold">
+              Total detalles: <span id="totalDetalles">Q0.00</span>
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer class="py-4 bg-light mt-auto">
+        <div class="container-fluid px-4 text-muted small">Made by Harold.</div>
+      </footer>
+    </div>
   </div>
-  <div id="layoutSidenav_content">
-    <main class="container-fluid px-4 mt-4">
-      <h1 class="mb-4">Ventas y Detalles</h1>
 
-      <!-- Tabla de Ventas -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <i class="fas fa-table me-1"></i>
-          Ventas
-        </div>
-        <div class="card-body">
-          <table class="table table-bordered" id="tablaVentas">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.js"></script>
+  <script>
+    document.getElementById('sidebarToggle').addEventListener('click', e => {
+      e.preventDefault();
+      document.body.classList.toggle('sb-sidenav-toggled');
+    });
 
-      <!-- Tabla de Detalles -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <i class="fas fa-table me-1"></i>
-          Detalles de Venta
-        </div>
-        <div class="card-body">
-          <table class="table table-bordered" id="tablaDetalles">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>ID Venta</th>
-                <th>ID Ticket</th>
-                <th>Cantidad</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-    <footer class="py-4 bg-light mt-auto">
-      <div class="container-fluid px-4 text-muted small">Made by Harold.</div>
-    </footer>
-  </div>
-</div>
+    const cargarVentas = async () => {
+      try {
+        const tablaVentas = document.querySelector("#ventasBody");
+        const totalVentasEl = document.getElementById("totalVentas");
+        let total = 0;
+        const res = await fetch('/api/ventas');
+        const ventas = await res.json();
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  document.getElementById('sidebarToggle').addEventListener('click', e => {
-    e.preventDefault();
-    document.body.classList.toggle('sb-sidenav-toggled');
-  });
+        tablaVentas.innerHTML = '';
+        ventas.forEach(venta => {
+          const comprador = venta.comprador?.trim() || 'CF';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${venta.id}</td>
+            <td>${new Date(venta.fecha).toLocaleString()}</td>
+            <td>${comprador}</td>
+            <td>${parseFloat(venta.total).toFixed(2)}</td>
+          `;
+          total += parseFloat(venta.total);
+          tablaVentas.appendChild(tr);
+        });
 
-  const tablaVentas = document.querySelector('#tablaVentas tbody');
-  const tablaDetalles = document.querySelector('#tablaDetalles tbody');
+        totalVentasEl.textContent = `Q${total.toFixed(2)}`;
 
-  const cargarVentas = async () => {
-    try {
-      tablaVentas.innerHTML = '';
-      const res = await fetch('/api/ventas');
-      const ventas = await res.json();
-      ventas.forEach(venta => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${venta.id}</td>
-          <td>${venta.fecha}</td>
-          <td>${venta.total}</td>
-        `;
-        tablaVentas.appendChild(tr);
+              new simpleDatatables.DataTable("#tablaVentas", {
+        paging: false,
+        searchable: true,
+        perPageSelect: false
       });
-    } catch (err) {
-      console.error('Error al cargar ventas:', err);
-    }
-  };
+      } catch (err) {
+        console.error('Error al cargar ventas:', err);
+      }
+    };
 
-  const cargarDetalles = async () => {
-    try {
-      tablaDetalles.innerHTML = '';
-      const res = await fetch('/api/detalles');
-      const detalles = await res.json();
-      detalles.forEach(detalle => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${detalle.id}</td>
-          <td>${detalle.id_venta}</td>
-          <td>${detalle.id_ticket}</td>
-          <td>${detalle.cantidad}</td>
-          <td>${detalle.subtotal}</td>
-        `;
-        tablaDetalles.appendChild(tr);
+    
+    const cargarDetalles = async () => {
+      try {
+        const tablaDetalles = document.querySelector("#detallesBody");
+        const totalDetallesEl = document.getElementById("totalDetalles");
+        let total = 0;
+        const res = await fetch('/api/detalles');
+        const detalles = await res.json();
+
+        tablaDetalles.innerHTML = '';
+        detalles.forEach(detalle => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${detalle.id}</td>
+            <td>${detalle.venta_id}</td>
+            <td>${detalle.tipo_ticket_id}</td>
+            <td>${detalle.cantidad}</td>
+            <td>${parseFloat(detalle.subtotal).toFixed(2)}</td>
+          `;
+          total += parseFloat(detalle.subtotal);
+          tablaDetalles.appendChild(tr);
+        });
+
+        totalDetallesEl.textContent = `Q${total.toFixed(2)}`;
+              new simpleDatatables.DataTable("#tablaDetalles", {
+        paging: false,
+        searchable: true,
+        perPageSelect: false
       });
-    } catch (err) {
-      console.error('Error al cargar detalles:', err);
-    }
-  };
+      } catch (err) {
+        console.error('Error al cargar detalles:', err);
+      }
+    };
 
-  // Cargar ambas tablas al iniciar
-  cargarVentas();
-  cargarDetalles();
-</script>
+    
+    // Ejecutar al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarVentas();
+      cargarDetalles();
+    });
+  </script>
 </body>
 </html>
