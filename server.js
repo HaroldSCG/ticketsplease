@@ -33,12 +33,14 @@ const crearTablas = async () => {
         stock_inicial INTEGER NOT NULL CHECK (stock_inicial >= 0),
         stock_actual INTEGER NOT NULL CHECK (stock_actual >= 0)
       );
+
       CREATE TABLE IF NOT EXISTS ventas (
         id SERIAL PRIMARY KEY,
         fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         total DECIMAL(10,2) NOT NULL CHECK (total >= 0),
         comprador VARCHAR(100)
       );
+
       CREATE TABLE IF NOT EXISTS detalle_venta (
         id SERIAL PRIMARY KEY,
         venta_id INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
@@ -47,6 +49,8 @@ const crearTablas = async () => {
         subtotal DECIMAL(10,2) NOT NULL CHECK (subtotal >= 0),
         UNIQUE (venta_id, tipo_ticket_id)
       );
+
+      -- Descontar stock al agregar detalle
       CREATE OR REPLACE FUNCTION descontar_stock()
       RETURNS TRIGGER AS $$
       DECLARE stock_disponible INTEGER;
@@ -60,16 +64,39 @@ const crearTablas = async () => {
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
+
       DROP TRIGGER IF EXISTS trigger_descontar_stock ON detalle_venta;
       CREATE TRIGGER trigger_descontar_stock
         BEFORE INSERT ON detalle_venta
         FOR EACH ROW EXECUTE FUNCTION descontar_stock();
+
+      -- Recalcular total venta después de eliminar detalle
+      CREATE OR REPLACE FUNCTION actualizar_total_venta()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        UPDATE ventas
+        SET total = COALESCE((
+          SELECT SUM(subtotal)
+          FROM detalle_venta
+          WHERE venta_id = OLD.venta_id
+        ), 0)
+        WHERE id = OLD.venta_id;
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER IF EXISTS trigger_actualizar_total_venta ON detalle_venta;
+      CREATE TRIGGER trigger_actualizar_total_venta
+        AFTER DELETE ON detalle_venta
+        FOR EACH ROW EXECUTE FUNCTION actualizar_total_venta();
     `);
+
     console.log("✅ Tablas y triggers creados/verificados");
   } catch (err) {
     console.error("❌ Error al crear tablas:", err);
   }
 };
+
 
 // ==== ENDPOINTS tipo_ticket ====
 app.get("/api/tickets", async (req, res) => {
@@ -95,19 +122,20 @@ app.get("/api/tickets/:id", async (req, res) => {
 app.get("/api/ventas", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        id,
-        to_char(fecha_hora, 'YYYY-MM-DD"T"HH24:MI:SS') AS fecha,
-        total,
-        comprador
-      FROM ventas
-      ORDER BY id
+      SELECT v.id, 
+             to_char(v.fecha_hora, 'YYYY-MM-DD"T"HH24:MI:SS') AS fecha, 
+             v.total, 
+             v.comprador
+      FROM ventas v
+      ORDER BY v.id
     `);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 app.get("/api/ventas/:id", async (req, res) => {
   try {
@@ -122,12 +150,22 @@ app.get("/api/ventas/:id", async (req, res) => {
 // ==== ENDPOINTS detalle_venta ====
 app.get("/api/detalles", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM detalle_venta ORDER BY id");
+    const result = await pool.query(`
+      SELECT dv.id, 
+             dv.venta_id, 
+             dv.cantidad, 
+             dv.subtotal, 
+             tt.nombre AS descripcion
+      FROM detalle_venta dv
+      JOIN tipo_ticket tt ON dv.tipo_ticket_id = tt.id
+      ORDER BY dv.id
+    `);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 app.get("/api/detalles/:id", async (req, res) => {
   try {

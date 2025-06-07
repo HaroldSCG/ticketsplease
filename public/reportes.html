@@ -52,7 +52,8 @@
             <table class="table table-bordered" id="tablaVentas">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>ID Venta</th>
+
                   <th>Fecha</th>
                   <th>Comprador</th>
                   <th>Total</th>
@@ -82,7 +83,7 @@
                 <tr>
                   <th>ID</th>
                   <th>ID Venta</th>
-                  <th>ID Ticket</th>
+                  <th>Descripcion</th>
                   <th>Cantidad</th>
                   <th>Subtotal</th>
                 </tr>
@@ -105,86 +106,94 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.js"></script>
-  <script>
-    document.getElementById('sidebarToggle').addEventListener('click', e => {
-      e.preventDefault();
-      document.body.classList.toggle('sb-sidenav-toggled');
-    });
+<!-- SOLO CAMBIOS DENTRO DEL SCRIPT -->
+<script>
+  document.getElementById('sidebarToggle').addEventListener('click', e => {
+    e.preventDefault();
+    document.body.classList.toggle('sb-sidenav-toggled');
+  });
 
-    const cargarVentas = async () => {
-      try {
-        const tablaVentas = document.querySelector("#ventasBody");
-        const totalVentasEl = document.getElementById("totalVentas");
-        let total = 0;
-        const res = await fetch('/api/ventas');
-        const ventas = await res.json();
+  const cargarVentas = async () => {
+    try {
+      const tablaVentas = document.querySelector("#ventasBody");
+      const totalVentasEl = document.getElementById("totalVentas");
+      let total = 0;
+      const res = await fetch('/api/ventas');
+      const ventas = await res.json();
 
-        tablaVentas.innerHTML = '';
-        ventas.forEach(venta => {
-          const comprador = venta.comprador?.trim() || 'CF';
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${venta.id}</td>
-            <td>${new Date(venta.fecha).toLocaleString()}</td>
-            <td>${comprador}</td>
-            <td>${parseFloat(venta.total).toFixed(2)}</td>
-          `;
-          total += parseFloat(venta.total);
-          tablaVentas.appendChild(tr);
-        });
+      tablaVentas.innerHTML = '';
+      ventas.forEach(venta => {
+        const comprador = venta.comprador?.trim() || 'CF';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${venta.id}</td>
 
-        totalVentasEl.textContent = `Q${total.toFixed(2)}`;
-
-              new simpleDatatables.DataTable("#tablaVentas", {
-        paging: false,
-        searchable: true,
-        perPageSelect: false
+          <td>${new Date(venta.fecha).toLocaleString()}</td>
+          <td>${comprador}</td>
+          <td>${parseFloat(venta.total).toFixed(2)}</td>
+        `;
+        total += parseFloat(venta.total);
+        tablaVentas.appendChild(tr);
       });
-      } catch (err) {
-        console.error('Error al cargar ventas:', err);
-      }
-    };
 
-    
-    const cargarDetalles = async () => {
-      try {
-        const tablaDetalles = document.querySelector("#detallesBody");
-        const totalDetallesEl = document.getElementById("totalDetalles");
-        let total = 0;
-        const res = await fetch('/api/detalles');
-        const detalles = await res.json();
+      totalVentasEl.textContent = `Q${total.toFixed(2)}`;
 
-        tablaDetalles.innerHTML = '';
-        detalles.forEach(detalle => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${detalle.id}</td>
-            <td>${detalle.venta_id}</td>
-            <td>${detalle.tipo_ticket_id}</td>
-            <td>${detalle.cantidad}</td>
-            <td>${parseFloat(detalle.subtotal).toFixed(2)}</td>
-          `;
-          total += parseFloat(detalle.subtotal);
-          tablaDetalles.appendChild(tr);
+      // Solo reinicia si no está ya inicializado
+      if (!document.querySelector("#tablaVentas").classList.contains('datatable-loaded')) {
+        new simpleDatatables.DataTable("#tablaVentas", {
+          paging: false,
+          searchable: true,
+          perPageSelect: false
         });
-
-        totalDetallesEl.textContent = `Q${total.toFixed(2)}`;
-              new simpleDatatables.DataTable("#tablaDetalles", {
-        paging: false,
-        searchable: true,
-        perPageSelect: false
-      });
-      } catch (err) {
-        console.error('Error al cargar detalles:', err);
+        document.querySelector("#tablaVentas").classList.add('datatable-loaded');
       }
-    };
+    } catch (err) {
+      console.error('Error al cargar ventas:', err);
+    }
+  };
 
-    
-    // Ejecutar al cargar
-    window.addEventListener('DOMContentLoaded', () => {
-      cargarVentas();
-      cargarDetalles();
-    });
-  </script>
+  const cargarDetalles = async () => {
+    try {
+      const tablaDetalles = document.querySelector("#detallesBody");
+      const totalDetallesEl = document.getElementById("totalDetalles");
+      let total = 0;
+      const res = await fetch('/api/detalles');
+      const detalles = await res.json();
+
+      tablaDetalles.innerHTML = '';
+      detalles.forEach(detalle => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${detalle.id}</td>
+          <td>${detalle.venta_id}</td>
+          <td>${detalle.descripcion || '-'}</td>
+          <td>${detalle.cantidad}</td>
+          <td>${parseFloat(detalle.subtotal).toFixed(2)}</td>
+        `;
+        total += parseFloat(detalle.subtotal);
+        tablaDetalles.appendChild(tr);
+      });
+
+      totalDetallesEl.textContent = `Q${total.toFixed(2)}`;
+
+      if (!document.querySelector("#tablaDetalles").classList.contains('datatable-loaded')) {
+        new simpleDatatables.DataTable("#tablaDetalles", {
+          paging: false,
+          searchable: true,
+          perPageSelect: false
+        });
+        document.querySelector("#tablaDetalles").classList.add('datatable-loaded');
+      }
+    } catch (err) {
+      console.error('Error al cargar detalles:', err);
+    }
+  };
+
+  window.addEventListener('DOMContentLoaded', () => {
+    cargarVentas();
+    cargarDetalles();
+  });
+</script>
+
 </body>
 </html>
