@@ -1,19 +1,27 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const path = require("path");
 const { Pool } = require("pg");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ||
-    "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
+  connectionString: process.env.DATABASE_URL || "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
   ssl: { rejectUnauthorized: false },
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
+const emitirActualizacion = async () => {
+  const result = await pool.query("SELECT * FROM tipo_ticket ORDER BY id");
+  io.emit("actualizar_tickets", result.rows);
+};
 
 const crearTablas = async () => {
   try {
@@ -63,6 +71,7 @@ const crearTablas = async () => {
   }
 };
 
+// ==== ENDPOINTS tipo_ticket ====
 app.get("/api/tickets", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM tipo_ticket ORDER BY id");
@@ -82,6 +91,47 @@ app.get("/api/tickets/:id", async (req, res) => {
   }
 });
 
+// ==== ENDPOINTS ventas ====
+app.get("/api/ventas", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM ventas ORDER BY id");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/ventas/:id", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM ventas WHERE id = $1", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Venta no encontrada" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==== ENDPOINTS detalle_venta ====
+app.get("/api/detalles", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM detalle_venta ORDER BY id");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/detalles/:id", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM detalle_venta WHERE id = $1", [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Detalle no encontrado" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==== CREACIÓN de tipo_ticket ====
 app.post("/api/tickets", async (req, res) => {
   const { nombre, precio, stock_inicial, stock_actual } = req.body;
   if (!(nombre && precio > 0 && stock_inicial >= 0 && stock_actual >= 0)) {
@@ -99,6 +149,7 @@ app.post("/api/tickets", async (req, res) => {
   }
 });
 
+// ==== ACTUALIZACIÓN de tipo_ticket ====
 app.put("/api/tickets/:id", async (req, res) => {
   const { nombre, precio, stock_inicial, stock_actual } = req.body;
   if (!(nombre && precio > 0 && stock_inicial >= 0 && stock_actual >= 0)) {
@@ -118,6 +169,7 @@ app.put("/api/tickets/:id", async (req, res) => {
   }
 });
 
+// ==== ELIMINACIÓN de tipo_ticket ====
 app.delete("/api/tickets/:id", async (req, res) => {
   try {
     const result = await pool.query("DELETE FROM tipo_ticket WHERE id = $1 RETURNING *", [req.params.id]);
@@ -128,7 +180,7 @@ app.delete("/api/tickets/:id", async (req, res) => {
   }
 });
 
-// Endpoints de ventas (sin cambios)
+// ==== CREACIÓN de venta ====
 app.post("/api/ventas", async (req, res) => {
   const { comprador, total, detalles } = req.body;
   if (!Array.isArray(detalles) || detalles.length === 0 || total < 0) {
@@ -150,6 +202,7 @@ app.post("/api/ventas", async (req, res) => {
       );
     }
     await client.query("COMMIT");
+    await emitirActualizacion();
     res.status(201).json({ message: "Venta registrada exitosamente." });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -159,7 +212,17 @@ app.post("/api/ventas", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// ==== INICIO DEL SERVIDOR ====
+server.listen(PORT, () => {
   console.log(`🚀 Servidor en http://localhost:${PORT}`);
   crearTablas();
+});
+
+// ==== SOCKET.IO ====
+io.on("connection", (socket) => {
+  console.log("🔌 Cliente conectado");
+
+  pool.query("SELECT * FROM tipo_ticket ORDER BY id")
+    .then(result => socket.emit("actualizar_tickets", result.rows))
+    .catch(err => console.error(err));
 });

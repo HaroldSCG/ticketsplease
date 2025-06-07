@@ -9,6 +9,21 @@
   <link href="styles.css" rel="stylesheet" />
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
 </head>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+socket.on("actualizar_tickets", (nuevosTickets) => {
+  console.log("📦 Tickets actualizados (via socket):", nuevosTickets);
+  tickets = nuevosTickets;
+  renderTickets();
+  calcularTotal(); // para que se actualice el botón de venta correctamente
+});
+
+</script>
+
+
 <body class="sb-nav-fixed">
 <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
   <a class="navbar-brand ps-3" href="index.html">Kermés - Tickets</a>
@@ -21,7 +36,7 @@
       <div class="sb-sidenav-menu">
         <div class="nav"><div class="sb-sidenav-menu-heading">Menú</div>
           <a class="nav-link" href="index.html">Venta de Tickets</a>
-          <a class="nav-link" href="https://www.youtube.com/watch?v=2qBlE2-WL60">Reportes</a>
+          <a class="nav-link" href="reportes.html">Reportes</a>
           <a class="nav-link" href="agregar_ticket.html">Ingresar tipo de tickets</a>
         </div>
       </div>
