@@ -3,7 +3,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const { Pool } = require("pg");
-
+const { DateTime } = require("luxon");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -123,17 +123,24 @@ app.get("/api/ventas", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT v.id, 
-             to_char(v.fecha_hora, 'YYYY-MM-DD"T"HH24:MI:SS') AS fecha, 
-             v.total, 
-             v.comprador
+            v.fecha_hora, 
+            v.total, 
+            v.comprador
       FROM ventas v
       ORDER BY v.id
     `);
-    res.json(result.rows);
+
+    const ventasConFecha = result.rows.map(v => ({
+      ...v,
+      fecha: DateTime.fromJSDate(new Date(v.fecha_hora)).setZone("America/Guatemala").toISO()
+    }));
+
+    res.json(ventasConFecha);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 

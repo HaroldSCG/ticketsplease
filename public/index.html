@@ -89,20 +89,36 @@ async function cargarTickets() {
 function renderTickets() {
   const container = document.getElementById('ticket-container');
   container.innerHTML = '';
+
   tickets.forEach(t => {
     const col = document.createElement('div');
-    col.className = 'col-md-4 mb-4';
+    col.className = 'col-sm-6 col-md-4 col-lg-3 mb-3';
+
+    // Establecer color de fondo según el nombre
+    let bgColor = '#e2efd9'; // color por defecto
+    const nombreLower = t.nombre.toLowerCase();
+
+    if (nombreLower.startsWith('almuerzo')) {
+      bgColor = '#f1ede4';
+    } else if (nombreLower.startsWith('bebida')) {
+      bgColor = '#cfe1e6';
+    } else if (nombreLower.startsWith('refaccion')) {
+      bgColor = '#e4c4d4';
+    }
+
     col.innerHTML = `
-      <div class="card h-100">
-        <div class="card-body text-center">
-          <h5 class="card-title">${t.nombre}</h5>
-          <p class="card-text">Precio: <strong>Q${parseFloat(t.precio).toFixed(2)}</strong></p>
-          <p>Disponibles: <span id="disp-${t.id}">${t.stock_actual}</span></p>
-          <input type="number" class="form-control" id="cantidad-${t.id}"
+      <div class="card h-100" style="background-color: ${bgColor}; font-size: 0.9rem;">
+        <div class="card-body text-center" style="padding: 0.75rem 0.5rem;">
+          <h5 class="card-title" style="font-size: 1rem; margin-bottom: 0.5rem;">${t.nombre}</h5>
+          <p class="card-text" style="margin-bottom: 0.3rem;">Precio: <strong>Q${parseFloat(t.precio).toFixed(2)}</strong></p>
+          <p style="margin-bottom: 0.5rem;">Disponibles: <span id="disp-${t.id}">${t.stock_actual}</span></p>
+          <input type="number" class="form-control form-control-sm" id="cantidad-${t.id}"
             min="0" max="${t.stock_actual}" placeholder="Cantidad"
             oninput="calcularTotal()" />
         </div>
-      </div>`;
+      </div>
+    `;
+
     container.appendChild(col);
   });
 }

@@ -4251,6 +4251,11 @@ textarea.form-control-lg {
   color: var(--bs-card-color);
 }
 
+.card-body.ticket-card-body {
+  padding: 0.5rem 0.75rem; /* menos espacio vertical y horizontal */
+  font-size: 0.9rem;       /* opcional: texto ligeramente más compacto */
+}
+
 
 .card-title {
   margin-bottom: var(--bs-card-title-spacer-y);

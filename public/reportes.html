@@ -8,7 +8,8 @@
   <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
   <link href="styles.css" rel="stylesheet" />
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
-  
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+
 </head>
 
 
@@ -108,50 +109,60 @@
   <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.js"></script>
 <!-- SOLO CAMBIOS DENTRO DEL SCRIPT -->
 <script>
+
+  const { DateTime } = luxon;
   document.getElementById('sidebarToggle').addEventListener('click', e => {
     e.preventDefault();
     document.body.classList.toggle('sb-sidenav-toggled');
   });
+  
+const cargarVentas = async () => {
+  try {
+    const tablaVentas = document.querySelector("#ventasBody");
+    const totalVentasEl = document.getElementById("totalVentas");
+    let total = 0;
+    const res = await fetch('/api/ventas');
+    const ventas = await res.json();
 
-  const cargarVentas = async () => {
-    try {
-      const tablaVentas = document.querySelector("#ventasBody");
-      const totalVentasEl = document.getElementById("totalVentas");
-      let total = 0;
-      const res = await fetch('/api/ventas');
-      const ventas = await res.json();
+    tablaVentas.innerHTML = '';
+    ventas.forEach(venta => {
+      const comprador = venta.comprador?.trim() || 'CF';
+      // Reparar el formato de la fecha antes de parsear
+        const fechaFix = venta.fecha.replace(' ', 'T').split('.')[0]; // "2025-06-08T05:43:28"
 
-      tablaVentas.innerHTML = '';
-      ventas.forEach(venta => {
-        const comprador = venta.comprador?.trim() || 'CF';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${venta.id}</td>
+        const fechaGuatemala = luxon.DateTime
+          .fromISO(fechaFix, { zone: 'utc' })           // trata como UTC puro
+          .setZone('America/Guatemala')                 // convierte a Guatemala
+          .toLocaleString(luxon.DateTime.DATETIME_MED_WITH_SECONDS); // formato amigable
 
-          <td>${new Date(venta.fecha).toLocaleString('es-GT', { timeZone: 'America/Guatemala' })}</td>
 
-          <td>${comprador}</td>
-          <td>${parseFloat(venta.total).toFixed(2)}</td>
-        `;
-        total += parseFloat(venta.total);
-        tablaVentas.appendChild(tr);
+      const ventaTotal = parseFloat(venta.total) || 0;
+      total += ventaTotal;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${venta.id}</td>
+        <td>${fechaGuatemala}</td>
+        <td>${comprador}</td>
+        <td>${ventaTotal.toFixed(2)}</td>
+      `;
+      tablaVentas.appendChild(tr);
+    });
+
+    totalVentasEl.textContent = `Q${total.toFixed(2)}`;
+
+    if (!document.querySelector("#tablaVentas").classList.contains('datatable-loaded')) {
+      new simpleDatatables.DataTable("#tablaVentas", {
+        paging: false,
+        searchable: true,
+        perPageSelect: false
       });
-
-      totalVentasEl.textContent = `Q${total.toFixed(2)}`;
-
-      // Solo reinicia si no está ya inicializado
-      if (!document.querySelector("#tablaVentas").classList.contains('datatable-loaded')) {
-        new simpleDatatables.DataTable("#tablaVentas", {
-          paging: false,
-          searchable: true,
-          perPageSelect: false
-        });
-        document.querySelector("#tablaVentas").classList.add('datatable-loaded');
-      }
-    } catch (err) {
-      console.error('Error al cargar ventas:', err);
+      document.querySelector("#tablaVentas").classList.add('datatable-loaded');
     }
-  };
+  } catch (err) {
+    console.error('Error al cargar ventas:', err);
+  }
+};
 
   const cargarDetalles = async () => {
     try {
