@@ -10,7 +10,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://dbvuelos_user:DB6w656h8bRWgyRQAJCSKME8fnxpZPh1@dpg-d0i2ceq4d50c73b1b1p0-a.oregon-postgres.render.com/dbvuelos",
+  connectionString: process.env.DATABASE_URL || "postgresql://dbtickets_9xrb_user:xxFkcirgyHsbZzxofglJUCnxwA2KOIFf@dpg-d12ffl15pdvs73cmiou0-a.oregon-postgres.render.com/dbtickets_9xrb",
   ssl: { rejectUnauthorized: false },
 });
 
