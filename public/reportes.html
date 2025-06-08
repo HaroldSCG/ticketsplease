@@ -9,9 +9,15 @@
   <link href="styles.css" rel="stylesheet" />
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style media="print">
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+</style>
 
 </head>
-
 
 <body class="sb-nav-fixed">
   <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
@@ -40,6 +46,11 @@
     <div id="layoutSidenav_content">
       <main class="container-fluid px-4 mt-4">
         <h1 class="mb-4">Ventas y Detalles</h1>
+        <div class="mb-3 text-end">
+          <button class="btn btn-danger" onclick="generarPDF()">
+            <i class="fas fa-file-pdf"></i> Reportes - PDF
+          </button>
+        </div>
 
         <!-- Ventas -->
         <div class="card mb-4">
@@ -54,19 +65,16 @@
               <thead>
                 <tr>
                   <th>ID Venta</th>
-
                   <th>Fecha</th>
                   <th>Comprador</th>
                   <th>Total</th>
                 </tr>
               </thead>
               <tbody id="ventasBody"></tbody>
-
-
             </table>
-              <div class="mt-2 text-end fw-bold">
+            <div class="mt-2 text-end fw-bold">
               Total ventas: <span id="totalVentas">Q0.00</span>
-              </div>
+            </div>
           </div>
         </div>
 
@@ -84,13 +92,12 @@
                 <tr>
                   <th>ID</th>
                   <th>ID Venta</th>
-                  <th>Descripcion</th>
+                  <th>Descripción</th>
                   <th>Cantidad</th>
                   <th>Subtotal</th>
                 </tr>
               </thead>
               <tbody id="detallesBody"></tbody>
- 
             </table>
             <div class="mt-2 text-end fw-bold">
               Total detalles: <span id="totalDetalles">Q0.00</span>
@@ -99,113 +106,208 @@
         </div>
       </main>
       <footer class="py-4 bg-light mt-auto">
-        <div class="container-fluid px-4 text-muted small">Made by Harold.</div>
+        <div class="container-fluid px-4 text-muted small">Made by Harold. Haroldscg7@gmail.com</div>
       </footer>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.js"></script>
-<!-- SOLO CAMBIOS DENTRO DEL SCRIPT -->
-<script>
+  <!-- PDF container fuera del flujo visual -->
+<div id="pdf-container" style="
+  display: none;
+  font-family: 'Arial', sans-serif;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+">
+  <div style="
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px;
+  ">
+    <div style="display: flex; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+      <div style="flex-shrink: 0;">
+        <img src="/img/itv.png" alt="Logo" style="height: 60px; max-width: 100px; object-fit: contain;">
+      </div>
+      <div style="margin-left: 15px; flex-grow: 1; text-align: right;">
+        <h2 style="margin: 0;">Reporte de Ventas - Kermés</h2>
+        <small>Fecha de generación: <span id="pdf-date"></span></small>
+      </div>
+    </div>
 
-  const { DateTime } = luxon;
-  document.getElementById('sidebarToggle').addEventListener('click', e => {
-    e.preventDefault();
-    document.body.classList.toggle('sb-sidenav-toggled');
-  });
-  
-const cargarVentas = async () => {
-  try {
-    const tablaVentas = document.querySelector("#ventasBody");
-    const totalVentasEl = document.getElementById("totalVentas");
-    let total = 0;
-    const res = await fetch('/api/ventas');
-    const ventas = await res.json();
-
-    tablaVentas.innerHTML = '';
-    ventas.forEach(venta => {
-      const comprador = venta.comprador?.trim() || 'CF';
-      // Reparar el formato de la fecha antes de parsear
-        const fechaFix = venta.fecha.replace(' ', 'T').split('.')[0]; // "2025-06-08T05:43:28"
-
-        const fechaGuatemala = luxon.DateTime
-          .fromISO(fechaFix, { zone: 'utc' })           // trata como UTC puro
-          .setZone('America/Guatemala')                 // convierte a Guatemala
-          .toLocaleString(luxon.DateTime.DATETIME_MED_WITH_SECONDS); // formato amigable
+    <div id="pdf-ventas"></div>
+    <hr style="margin: 20px 0; page-break-after: always;">
+    <div id="pdf-detalles"></div>
+  </div>
+</div>
 
 
-      const ventaTotal = parseFloat(venta.total) || 0;
-      total += ventaTotal;
+  <script>
+    const { DateTime } = luxon;
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${venta.id}</td>
-        <td>${fechaGuatemala}</td>
-        <td>${comprador}</td>
-        <td>${ventaTotal.toFixed(2)}</td>
-      `;
-      tablaVentas.appendChild(tr);
+    document.getElementById('sidebarToggle').addEventListener('click', e => {
+      e.preventDefault();
+      document.body.classList.toggle('sb-sidenav-toggled');
     });
 
-    totalVentasEl.textContent = `Q${total.toFixed(2)}`;
+    const cargarVentas = async () => {
+      try {
+        const tablaVentas = document.querySelector("#ventasBody");
+        const totalVentasEl = document.getElementById("totalVentas");
+        let total = 0;
+        const res = await fetch('/api/ventas');
+        const ventas = await res.json();
 
-    if (!document.querySelector("#tablaVentas").classList.contains('datatable-loaded')) {
-      new simpleDatatables.DataTable("#tablaVentas", {
-        paging: false,
-        searchable: true,
-        perPageSelect: false
-      });
-      document.querySelector("#tablaVentas").classList.add('datatable-loaded');
-    }
-  } catch (err) {
-    console.error('Error al cargar ventas:', err);
-  }
-};
+        tablaVentas.innerHTML = '';
+        ventas.forEach(venta => {
+          const comprador = venta.comprador?.trim() || 'CF';
+          const fechaFix = venta.fecha.replace(' ', 'T').split('.')[0];
+          const fechaGuatemala = luxon.DateTime
+            .fromISO(fechaFix, { zone: 'utc' })
+            .setZone('America/Guatemala')
+            .toLocaleString(luxon.DateTime.DATETIME_MED_WITH_SECONDS);
 
-  const cargarDetalles = async () => {
-    try {
-      const tablaDetalles = document.querySelector("#detallesBody");
-      const totalDetallesEl = document.getElementById("totalDetalles");
-      let total = 0;
-      const res = await fetch('/api/detalles');
-      const detalles = await res.json();
+          const ventaTotal = parseFloat(venta.total) || 0;
+          total += ventaTotal;
 
-      tablaDetalles.innerHTML = '';
-      detalles.forEach(detalle => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${detalle.id}</td>
-          <td>${detalle.venta_id}</td>
-          <td>${detalle.descripcion || '-'}</td>
-          <td>${detalle.cantidad}</td>
-          <td>${parseFloat(detalle.subtotal).toFixed(2)}</td>
-        `;
-        total += parseFloat(detalle.subtotal);
-        tablaDetalles.appendChild(tr);
-      });
-
-      totalDetallesEl.textContent = `Q${total.toFixed(2)}`;
-
-      if (!document.querySelector("#tablaDetalles").classList.contains('datatable-loaded')) {
-        new simpleDatatables.DataTable("#tablaDetalles", {
-          paging: false,
-          searchable: true,
-          perPageSelect: false
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${venta.id}</td>
+            <td>${fechaGuatemala}</td>
+            <td>${comprador}</td>
+            <td>${ventaTotal.toFixed(2)}</td>
+          `;
+          tablaVentas.appendChild(tr);
         });
-        document.querySelector("#tablaDetalles").classList.add('datatable-loaded');
+
+        totalVentasEl.textContent = `Q${total.toFixed(2)}`;
+        if (!document.querySelector("#tablaVentas").classList.contains('datatable-loaded')) {
+          new simpleDatatables.DataTable("#tablaVentas", {
+            paging: false,
+            searchable: true,
+            perPageSelect: false
+          });
+          document.querySelector("#tablaVentas").classList.add('datatable-loaded');
+        }
+      } catch (err) {
+        console.error('Error al cargar ventas:', err);
       }
-    } catch (err) {
-      console.error('Error al cargar detalles:', err);
+    };
+
+    const cargarDetalles = async () => {
+      try {
+        const tablaDetalles = document.querySelector("#detallesBody");
+        const totalDetallesEl = document.getElementById("totalDetalles");
+        let total = 0;
+        const res = await fetch('/api/detalles');
+        const detalles = await res.json();
+
+        tablaDetalles.innerHTML = '';
+        detalles.forEach(detalle => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${detalle.id}</td>
+            <td>${detalle.venta_id}</td>
+            <td>${detalle.descripcion || '-'}</td>
+            <td>${detalle.cantidad}</td>
+            <td>${parseFloat(detalle.subtotal).toFixed(2)}</td>
+          `;
+          total += parseFloat(detalle.subtotal);
+          tablaDetalles.appendChild(tr);
+        });
+
+        totalDetallesEl.textContent = `Q${total.toFixed(2)}`;
+        if (!document.querySelector("#tablaDetalles").classList.contains('datatable-loaded')) {
+          new simpleDatatables.DataTable("#tablaDetalles", {
+            paging: false,
+            searchable: true,
+            perPageSelect: false
+          });
+          document.querySelector("#tablaDetalles").classList.add('datatable-loaded');
+        }
+      } catch (err) {
+        console.error('Error al cargar detalles:', err);
+      }
+    };
+
+function generarTablaFormal(data, headers) {
+  let table = `
+    <table style="
+      width: 100%;
+      max-width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      table-layout: fixed;
+      font-size: 11px;
+    ">
+      <thead>
+        <tr>
+          ${headers.map(h => `
+            <th style="
+              border: 1px solid #000;
+              padding: 6px;
+              background: #f0f0f0;
+              text-align: left;
+              word-break: break-word;
+              overflow-wrap: break-word;
+            ">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(row => `
+          <tr style="page-break-inside: avoid;">
+            ${row.map(cell => `
+              <td style="
+                border: 1px solid #000;
+                padding: 6px;
+                word-break: break-word;
+                overflow-wrap: break-word;
+              ">${cell}</td>`).join('')}
+          </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  return table;
+}
+
+    function generarPDF() {
+      const fechaActual = DateTime.now().setZone('America/Guatemala').toLocaleString(DateTime.DATETIME_MED);
+      document.getElementById("pdf-date").textContent = fechaActual;
+
+      const ventasData = Array.from(document.querySelectorAll('#ventasBody tr')).map(tr =>
+        Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+      );
+      const detallesData = Array.from(document.querySelectorAll('#detallesBody tr')).map(tr =>
+        Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+      );
+
+      document.getElementById("pdf-ventas").innerHTML = `
+        <h4 style="margin-bottom: 8px;">Ventas</h4>
+        ${generarTablaFormal(ventasData, ["ID Venta", "Fecha", "Comprador", "Total"])}
+      `;
+
+      document.getElementById("pdf-detalles").innerHTML = `
+        <h4 style="margin-bottom: 8px;">Detalles de Venta</h4>
+        ${generarTablaFormal(detallesData, ["ID", "ID Venta", "Descripción", "Cantidad", "Subtotal"])}
+      `;
+
+      const pdfElement = document.getElementById("pdf-container");
+      pdfElement.style.display = "block";
+
+      html2pdf().set({
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `reporte_ventas_${DateTime.now().toFormat("yyyyLLdd_HHmmss")}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      }).from(pdfElement).save().then(() => {
+        pdfElement.style.display = "none";
+      });
     }
-  };
 
-  window.addEventListener('DOMContentLoaded', () => {
-    cargarVentas();
-    cargarDetalles();
-  });
-</script>
-
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarVentas();
+      cargarDetalles();
+    });
+  </script>
 </body>
 </html>
